@@ -49,6 +49,7 @@ from .const import (
     CONF_TRACK_CLIENTS,
     CONF_TRACK_DEVICES,
     CONF_TRACK_WIRED_CLIENTS,
+    CONF_TRAFFIC_RULE_SWITCH,
     DEFAULT_ALLOW_BANDWIDTH_SENSORS,
     DEFAULT_ALLOW_UPTIME_SENSORS,
     DEFAULT_DETECTION_TIME,
@@ -147,6 +148,9 @@ class UniFiController:
         self.option_allow_uptime_sensors: bool = options.get(
             CONF_ALLOW_UPTIME_SENSORS, DEFAULT_ALLOW_UPTIME_SENSORS
         )
+
+        # Traffic rule switch options
+        self.option_switch_traffic_rules = options.get(CONF_TRAFFIC_RULE_SWITCH, [])
 
     @property
     def host(self) -> str:

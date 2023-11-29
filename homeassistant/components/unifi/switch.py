@@ -19,6 +19,7 @@ from aiounifi.interfaces.dpi_restriction_groups import DPIRestrictionGroups
 from aiounifi.interfaces.outlets import Outlets
 from aiounifi.interfaces.port_forwarding import PortForwarding
 from aiounifi.interfaces.ports import Ports
+from aiounifi.interfaces.traffic_rules import TrafficRules
 from aiounifi.interfaces.wlans import Wlans
 from aiounifi.models.api import ApiItemT
 from aiounifi.models.client import Client, ClientBlockRequest
@@ -29,6 +30,7 @@ from aiounifi.models.event import Event, EventKey
 from aiounifi.models.outlet import Outlet
 from aiounifi.models.port import Port
 from aiounifi.models.port_forward import PortForward, PortForwardEnableRequest
+from aiounifi.models.traffic_rule import TrafficRule
 from aiounifi.models.wlan import Wlan, WlanEnableRequest
 
 from homeassistant.components.switch import (
@@ -103,6 +105,17 @@ def async_port_forward_device_info_fn(
     )
 
 
+@callback
+def async_traffic_rule_info_fn(controller: UniFiController, obj_id: str) -> DeviceInfo:
+    """Create device registry entry for traffic rule."""
+    api = controller.api
+    traffic_rule = api.traffic_rules.get(obj_id)
+    return DeviceInfo(
+        connections={(traffic_rule.action, traffic_rule.matching_target)},
+        default_name=traffic_rule.description,
+    )
+
+
 async def async_block_client_control_fn(
     controller: UniFiController, obj_id: str, target: bool
 ) -> None:
@@ -169,6 +182,15 @@ async def async_wlan_control_fn(
 ) -> None:
     """Control outlet relay."""
     await controller.api.request(WlanEnableRequest.create(obj_id, target))
+
+
+async def async_traffic_rule_control_fn(
+    controller: UniFiController, obj_id: str, target: bool
+) -> None:
+    """Control traffic rule state."""
+    api = controller.api
+    traffic_rule = api.traffic_rules.get(obj_id)
+    await api.traffic_rules.toggle(traffic_rule, state=target)
 
 
 @dataclass
@@ -290,6 +312,27 @@ ENTITY_DESCRIPTIONS: tuple[UnifiSwitchEntityDescription, ...] = (
         should_poll=False,
         supported_fn=lambda controller, obj_id: controller.api.ports[obj_id].port_poe,
         unique_id_fn=lambda controller, obj_id: f"{obj_id.split('_', 1)[0]}-poe-{obj_id.split('_', 1)[1]}",
+    ),
+    UnifiSwitchEntityDescription[TrafficRules, TrafficRule](
+        key="Toggle Traffic Rule",
+        device_class=SwitchDeviceClass.SWITCH,
+        entity_category=EntityCategory.CONFIG,
+        has_entity_name=True,
+        icon="mdi:traffic-light-outline",
+        allowed_fn=lambda controller, obj_id: obj_id
+        in controller.option_switch_traffic_rules,
+        api_handler_fn=lambda api: api.traffic_rules,
+        available_fn=lambda controller, obj_id: controller.available,
+        control_fn=async_traffic_rule_control_fn,
+        device_info_fn=async_traffic_rule_info_fn,
+        event_is_on=None,
+        event_to_subscribe=None,
+        is_on_fn=lambda controller, traffic_rule: traffic_rule.enabled,
+        name_fn=lambda traffic_rule: traffic_rule.description,
+        object_fn=lambda api, obj_id: api.traffic_rules.get(obj_id),
+        should_poll=False,
+        supported_fn=lambda controller, obj_id: True,
+        unique_id_fn=lambda controller, obj_id: f"traffic_rule-{obj_id}",
     ),
     UnifiSwitchEntityDescription[Wlans, Wlan](
         key="WLAN control",

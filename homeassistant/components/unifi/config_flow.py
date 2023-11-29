@@ -42,6 +42,7 @@ from .const import (
     CONF_TRACK_CLIENTS,
     CONF_TRACK_DEVICES,
     CONF_TRACK_WIRED_CLIENTS,
+    CONF_TRAFFIC_RULE_SWITCH,
     DEFAULT_DPI_RESTRICTIONS,
     DOMAIN as UNIFI_DOMAIN,
 )
@@ -404,7 +405,7 @@ class UnifiOptionsFlowHandler(config_entries.OptionsFlow):
         """Manage the statistics sensors options."""
         if user_input is not None:
             self.options.update(user_input)
-            return await self._update_options()
+            return await self.async_step_traffic_rules_control()
 
         return self.async_show_form(
             step_id="statistics_sensors",
@@ -418,6 +419,40 @@ class UnifiOptionsFlowHandler(config_entries.OptionsFlow):
                         CONF_ALLOW_UPTIME_SENSORS,
                         default=self.controller.option_allow_uptime_sensors,
                     ): bool,
+                }
+            ),
+            last_step=False,
+        )
+
+    async def async_step_traffic_rules_control(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Manage the traffic rules options."""
+        if user_input is not None:
+            self.options.update(user_input)
+            return await self._update_options()
+
+        traffic_rules_switch = {}
+
+        for traffic_rule in self.controller.api.traffic_rules.values():
+            traffic_rules_switch[
+                traffic_rule.id
+            ] = f"{traffic_rule.description or traffic_rule.id} ({traffic_rule.action} - {traffic_rule.matching_target})"
+
+        selected_traffic_rules_to_switch = [
+            traffic_rule
+            for traffic_rule in self.options.get(CONF_TRAFFIC_RULE_SWITCH, [])
+            if traffic_rule in traffic_rules_switch
+        ]
+
+        return self.async_show_form(
+            step_id="traffic_rules_control",
+            data_schema=vol.Schema(
+                {
+                    vol.Optional(
+                        CONF_TRAFFIC_RULE_SWITCH,
+                        default=selected_traffic_rules_to_switch,
+                    ): cv.multi_select(traffic_rules_switch),
                 }
             ),
             last_step=True,

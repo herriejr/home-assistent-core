@@ -29,6 +29,7 @@ CONF_IGNORE_WIRED_BUG = "ignore_wired_bug"
 CONF_TRACK_CLIENTS = "track_clients"
 CONF_TRACK_DEVICES = "track_devices"
 CONF_TRACK_WIRED_CLIENTS = "track_wired_clients"
+CONF_TRAFFIC_RULE_SWITCH = "traffic_rule_switch"
 CONF_SSID_FILTER = "ssid_filter"
 
 DEFAULT_ALLOW_BANDWIDTH_SENSORS = False
